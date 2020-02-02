@@ -38,18 +38,14 @@ app.get("/login", function(req, res){
 app.post("/login", function(req, res){
   const username = req.body.username;
   const password = req.body.password;
-  console.log("Email: " + username);
-  console.log("Pass: " + password);
   User.findOne({email: username}, function(err, user){
     if (err){
       console.log(err);
       return;
     }
     if (user){
-      console.log(user.password);
       bcrypt.compare(password, user.password, function(err, result){
-        if ( result == true){
-          console.log("Match!");
+        if ( result === true){
           res.render("secrets");
         }
       });
@@ -62,8 +58,6 @@ app.get("/register", function(req, res){
 });
 
 app.post("/register", function(req, res){
-  console.log("Email: " + req.body.username);
-  console.log("Pass: " + req.body.password);
   bcrypt.hash(req.body.password, saltRounds, function(err, hash){
     if (err)
     {
@@ -82,6 +76,10 @@ app.post("/register", function(req, res){
       res.render("secrets");
     });
   });
+});
+
+app.get("/logout", function(req,res){
+  res.redirect("/");
 });
 
 app.listen(3000, function(){
