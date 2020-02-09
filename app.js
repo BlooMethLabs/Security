@@ -35,8 +35,9 @@ mongoose.connect("mongodb://localhost:27017/userDB", {
 mongoose.set("useCreateIndex", true);
 
 const userSchema = new mongoose.Schema({
-  email: String,
-  password: String
+  email: {type: String, sparse: true},
+  password: {type: String, sparse: true},
+  googleID: {type: String, sparse: true}
 });
 
 userSchema.plugin(passportLocalMongoose);
@@ -46,8 +47,15 @@ const User = mongoose.model("User", userSchema);
 
 passport.use(User.createStrategy());
 
-passport.serializeUser(User.serializeUser());
-passport.deserializeUser(User.deserializeUser());
+passport.serializeUser(function(user, done){
+  done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done){
+  User.findById(id, function(err, user){
+    done(err, user);
+  });
+});
 
 passport.use(new GoogleStrategy({
   clientID: process.env.CLIENT_ID,
@@ -56,9 +64,27 @@ passport.use(new GoogleStrategy({
   userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo"
   },
   function(accessToken, refreshToken, profile, cb){
+    console.log("find or create");
+    console.log(profile);
     User.findOrCreate({googleID: profile.id}, function (err, user){
       return cb(err, user);
     });
+    // User.findOne({"googleID": profile.id}, function(err, user){
+    //   if (err) {
+    //     return cb(err);
+    //   }
+    //   if (!user){
+    //     user = new User({
+    //       googleID: profile.id
+    //     });
+    //     user.save(function(err){
+    //       if (err) console.log(err);
+    //       return cb(err, user);
+    //     });
+    //   } else {
+    //     return cb(err, user);
+    //   }
+    // });
   }
 ));
 
@@ -67,10 +93,6 @@ app.get("/", function(req, res){
 });
 
 app.get("/auth/google", passport.authenticate("google", {scope: ['profile']}));
-// app.get("/auth/google", function(req, res){
-//   console.log("auth google");
-//   passport.authenticate("google", {scope: ['profile']});
-// });
 
 app.get("/auth/google/secrets",
   passport.authenticate("google", {failureRedirect: "/login"}),
